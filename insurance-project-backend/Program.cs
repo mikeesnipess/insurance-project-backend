@@ -46,13 +46,19 @@ builder.Services.AddSwaggerGen(c =>
           Scheme = "oauth2",
           Name = "Bearer",
           In = ParameterLocation.Header,
-
         },
         new List<string>()
       }
     });
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin",
+        builder => builder.WithOrigins("http://localhost:4200")
+                          .AllowAnyHeader()
+                          .AllowAnyMethod());
+});
 
 var app = builder.Build();
 
@@ -64,6 +70,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Use CORS before any other middlewares
+app.UseCors("AllowSpecificOrigin");
+
 app.UseAuthorization();
+
 app.MapControllers();
+
 app.Run();
