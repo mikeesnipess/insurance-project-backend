@@ -1,4 +1,5 @@
 using insurance_project_backend.Models.FMCSA;
+using insurance_project_backend.Services.Drivers;
 using insurance_project_backend.Services.FMCSA;
 using Microsoft.OpenApi.Models;
 
@@ -20,6 +21,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.PropertyNamingPolicy = null;
 });
+
+builder.Services.AddScoped<IDriverDetailsService,DriverDetailsService>();
 
 builder.Services.AddSwaggerGen(c =>
 {
