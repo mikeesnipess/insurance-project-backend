@@ -1,7 +1,9 @@
 using insurance_project_backend.Models.FMCSA;
+using insurance_project_backend.Services.Company;
 using insurance_project_backend.Services.Drivers;
 using insurance_project_backend.Services.FMCSA;
 using Microsoft.OpenApi.Models;
+using PdfSharp.Charting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +25,10 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 });
 
 builder.Services.AddScoped<IDriverDetailsService,DriverDetailsService>();
+builder.Services.AddScoped<ICompanyDetailsService,CompanyDetailsService>();
+
+// Add AutoMapper
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 builder.Services.AddSwaggerGen(c =>
 {
