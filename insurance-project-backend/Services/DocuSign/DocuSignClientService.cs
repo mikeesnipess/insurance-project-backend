@@ -1,93 +1,134 @@
-﻿using DocuSign.eSign.Api;
+﻿using DocuSign.CodeExamples.Authentication;
 using DocuSign.eSign.Client;
 using DocuSign.eSign.Client.Auth;
-using DocuSign.eSign.Model;
+using ESignature.Examples;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
 
-public class DocuSignClientService
+namespace insurance_project_backend.Services.DocuSign
 {
-    private readonly ApiClient _apiClient;
-    private readonly EnvelopesApi _envelopesApi;
-
-    public DocuSignClientService(IConfiguration configuration)
+    public class DocuSignClientService
     {
-        string integratorKey = configuration["DocuSign:IntegratorKey"];
-        string userId = configuration["DocuSign:UserId"];
-        string oAuthBasePath = configuration["DocuSign:OAuthBasePath"];
-        string host = configuration["DocuSign:Host"];
-        string privateKeyText = configuration["DocuSign:PrivateKey"];
+        private readonly IConfiguration _configuration;
+        private static readonly string DevCenterPage = "https://developers.docusign.com/platform/auth/consent";
 
-        try
+        public DocuSignClientService(IConfiguration configuration)
         {
-            string cleanedPrivateKey = CleanPrivateKey(privateKeyText);
-            byte[] privateKeyBytes = Convert.FromBase64String(cleanedPrivateKey); // This line might throw a format exception if the key is still not clean
-            _apiClient = new ApiClient(host);
-            AuthenticateWithJwt(integratorKey, userId, oAuthBasePath, privateKeyBytes);
-            _envelopesApi = new EnvelopesApi(_apiClient);
+            _configuration = configuration;
         }
-        catch (Exception ex)
+
+        public void AuthenticateAndSendEnvelope()
         {
-            Console.WriteLine("Failed to initialize DocuSign client: " + ex.Message);
-            throw new ApplicationException("Failed to initialize DocuSign client.", ex);
+            var docuSignConfig = _configuration.GetSection("DocuSign");
+            var clientId = docuSignConfig["ClientId"];
+            var authServer = docuSignConfig["AuthServer"];
+            var impersonatedUserId = docuSignConfig["ImpersonatedUserID"];
+            var privateKeyFilePath = docuSignConfig["PrivateKeyFile"];
+
+            OAuth.OAuthToken accessToken = null;
+            try
+            {
+                accessToken = JwtAuth.AuthenticateWithJwt(
+                    "ESignature",
+                    clientId,
+                    impersonatedUserId,
+                    authServer,
+                    File.ReadAllBytes(privateKeyFilePath)
+                );
+            }
+            catch (ApiException apiExp)
+            {
+                if (apiExp.Message.Contains("consent_required"))
+                {
+                    RequestConsent(authServer, clientId);
+                    return;
+                }
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error: {apiExp.Message}");
+                Console.ForegroundColor = ConsoleColor.White;
+                return;
+            }
+
+            var docuSignClient = new DocuSignClient();
+            docuSignClient.SetOAuthBasePath(authServer);
+            var userInfo = docuSignClient.GetUserInfo(accessToken.access_token);
+            var account = userInfo.Accounts.FirstOrDefault();
+
+            if (account == null)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Error: No account found");
+                Console.ForegroundColor = ConsoleColor.White;
+                return;
+            }
+
+            Console.WriteLine("Welcome to the JWT Code example! ");
+            Console.Write("Enter the signer's email address: ");
+            string signerEmail = "artur.bejenari00@gmail.com"; // Replace with hardcoded value or use Console.ReadLine();
+            Console.Write("Enter the signer's name: ");
+            string signerName = "Artur"; // Replace with hardcoded value or use Console.ReadLine();
+            Console.Write("Enter the carbon copy's email address: ");
+            string ccEmail = "artur.bejenari00@gmail.com"; // Replace with hardcoded value or use Console.ReadLine();
+            Console.Write("Enter the carbon copy's name: ");
+            string ccName = "Artur Bejenari"; // Replace with hardcoded value or use Console.ReadLine();
+            string docDocx = Path.Combine(@"D:\UNIVER\ANUL 4\Licenta\Site\insurance-project-backend\insurance-project-backend\", "World_Wide_Corp_salary.docx");
+            string docPdf = Path.Combine(@"D:\UNIVER\ANUL 4\Licenta\Site\insurance-project-backend\insurance-project-backend\", "World_Wide_Corp_lorem.pdf");
+            Console.WriteLine("");
+            string envelopeId = SigningViaEmail.SendEnvelopeViaEmail(
+                signerEmail,
+                signerName,
+                ccEmail,
+                ccName,
+                accessToken.access_token,
+                account.BaseUri + "/restapi",
+                account.AccountId,
+                docDocx,
+                docPdf,
+                "sent"
+            );
+            Console.WriteLine("");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"Successfully sent envelope with envelopeId {envelopeId}");
+            Console.WriteLine("");
+            Console.WriteLine("");
+            Console.ForegroundColor = ConsoleColor.White;
         }
-    }
 
-
-    private string CleanPrivateKey(string privateKey)
-    {
-        if (string.IsNullOrWhiteSpace(privateKey))
-            throw new ApplicationException("Private key is empty");
-
-        // Remove headers and footers if present
-        privateKey = privateKey.Replace("-----BEGIN PRIVATE KEY-----", "")
-                                .Replace("-----END PRIVATE KEY-----", "");
-
-        // Remove new lines and spaces if any within the key itself
-        privateKey = privateKey.Replace("\n", "").Replace("\r", "").Replace(" ", "").Trim();
-
-        // Debug output to verify the cleaned key
-        Console.WriteLine("Cleaned Private Key: " + privateKey);
-
-        return privateKey;
-    }
-
-
-
-    private void AuthenticateWithJwt(string integratorKey, string userId, string oAuthBasePath, byte[] privateKeyBytes)
-    {
-        try
+        private void RequestConsent(string authServer, string clientId)
         {
-            OAuth.OAuthToken tokenInfo = _apiClient.RequestJWTUserToken(integratorKey, userId, oAuthBasePath, privateKeyBytes, 1);
-            _apiClient.Configuration.DefaultHeader.Add("Authorization", "Bearer " + tokenInfo.access_token);
-        }
-        catch (Exception ex)
-        {
-            throw new ApplicationException("Authentication failed: " + ex.Message, ex);
-        }
-    }
+            string caret = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "^" : "";
+            string url = $"https://{authServer}/oauth/auth?response_type=code{caret}&scope=impersonation%20signature{caret}&client_id={clientId}{caret}&redirect_uri={DevCenterPage}";
 
+            string consentRequiredMessage = $"Consent is required - launching browser (URL is {url})";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                consentRequiredMessage = consentRequiredMessage.Replace(caret, "");
+            }
 
+            Console.WriteLine(consentRequiredMessage);
 
-public EnvelopeSummary SendEnvelopeFromTemplate(string accountId, string templateId, List<TemplateRole> templateRoles)
-    {
-        EnvelopeDefinition envelopeDefinition = new EnvelopeDefinition
-        {
-            TemplateId = templateId,
-            TemplateRoles = templateRoles,
-            Status = "sent"
-        };
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = false });
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                Process.Start("xdg-open", url);
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                Process.Start("open", url);
+            }
 
-        try
-        {
-            return _envelopesApi.CreateEnvelope(accountId, envelopeDefinition);
-        }
-        catch (ApiException apiEx)
-        {
-            Console.WriteLine("DocuSign API Exception: " + apiEx.ErrorCode + ": " + apiEx.Message);
-            throw;
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine("Unable to send envelope; Exiting. Please rerun the console app once consent was provided");
+            Console.ForegroundColor = ConsoleColor.White;
+            Environment.Exit(-1);
         }
     }
 }
