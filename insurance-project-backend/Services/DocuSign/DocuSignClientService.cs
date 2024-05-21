@@ -2,11 +2,8 @@
 using DocuSign.eSign.Client;
 using DocuSign.eSign.Client.Auth;
 using ESignature.Examples;
-using Microsoft.Extensions.Configuration;
-using System;
+using insurance_project_backend.Models.DocuSign;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace insurance_project_backend.Services.DocuSign
@@ -21,7 +18,7 @@ namespace insurance_project_backend.Services.DocuSign
             _configuration = configuration;
         }
 
-        public void AuthenticateAndSendEnvelope()
+        public string AuthenticateAndSendEnvelope(DocuSignModel docuSignModel)
         {
             var docuSignConfig = _configuration.GetSection("DocuSign");
             var clientId = docuSignConfig["ClientId"];
@@ -45,13 +42,13 @@ namespace insurance_project_backend.Services.DocuSign
                 if (apiExp.Message.Contains("consent_required"))
                 {
                     RequestConsent(authServer, clientId);
-                    return;
+                    return "Consent required. Please grant consent and try again.";
                 }
 
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"Error: {apiExp.Message}");
                 Console.ForegroundColor = ConsoleColor.White;
-                return;
+                return $"Error: {apiExp.Message}";
             }
 
             var docuSignClient = new DocuSignClient();
@@ -64,14 +61,14 @@ namespace insurance_project_backend.Services.DocuSign
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine("Error: No account found");
                 Console.ForegroundColor = ConsoleColor.White;
-                return;
+                return "Error: No account found";
             }
 
             Console.WriteLine("Welcome to the JWT Code example! ");
             Console.Write("Enter the signer's email address: ");
-            string signerEmail = "artur.bejenari00@gmail.com"; // Replace with hardcoded value or use Console.ReadLine();
+            string signerEmail = docuSignModel.DriverDetails.EmailAddress; // Replace with hardcoded value or use Console.ReadLine();
             Console.Write("Enter the signer's name: ");
-            string signerName = "Artur"; // Replace with hardcoded value or use Console.ReadLine();
+            string signerName = docuSignModel.DriverDetails.FirstName + " " + docuSignModel.DriverDetails.LastName; // Replace with hardcoded value or use Console.ReadLine();
             Console.Write("Enter the carbon copy's email address: ");
             string ccEmail = "artur.bejenari00@gmail.com"; // Replace with hardcoded value or use Console.ReadLine();
             Console.Write("Enter the carbon copy's name: ");
@@ -80,6 +77,7 @@ namespace insurance_project_backend.Services.DocuSign
             string docPdf = Path.Combine(@"D:\UNIVER\ANUL 4\Licenta\Site\insurance-project-backend\insurance-project-backend\", "World_Wide_Corp_lorem.pdf");
             Console.WriteLine("");
             string envelopeId = SigningViaEmail.SendEnvelopeViaEmail(
+                docuSignModel,
                 signerEmail,
                 signerName,
                 ccEmail,
@@ -97,7 +95,10 @@ namespace insurance_project_backend.Services.DocuSign
             Console.WriteLine("");
             Console.WriteLine("");
             Console.ForegroundColor = ConsoleColor.White;
+
+            return envelopeId;
         }
+
 
         private void RequestConsent(string authServer, string clientId)
         {
