@@ -4,12 +4,14 @@
 
 namespace ESignature.Examples
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Text;
     using DocuSign.eSign.Api;
     using DocuSign.eSign.Client;
     using DocuSign.eSign.Model;
+    using insurance_project_backend.Models.DocuSign;
+    using insurance_project_backend.Models.Drivers;
+    using System;
+    using System.Collections.Generic;
+    using System.Text;
 
     public static class SigningViaEmail
     {
@@ -27,10 +29,10 @@ namespace ESignature.Examples
         /// <param name="docDocx">String of bytes representing the Word document (docx)</param>
         /// <param name="envStatus">Status to set the envelope to</param>
         /// <returns>EnvelopeId for the new envelope</returns>
-        public static string SendEnvelopeViaEmail(string signerEmail, string signerName, string ccEmail, string ccName, string accessToken, string basePath, string accountId, string docDocx, string docPdf, string envStatus)
+        public static string SendEnvelopeViaEmail(DocuSignModel docuSignModel, string signerEmail, string signerName, string ccEmail, string ccName, string accessToken, string basePath, string accountId, string docDocx, string docPdf, string envStatus)
         {
             //ds-snippet-start:eSign2Step3
-            EnvelopeDefinition env = MakeEnvelope(signerEmail, signerName, ccEmail, ccName, docDocx, docPdf, envStatus);
+            EnvelopeDefinition env = MakeEnvelope(docuSignModel, signerEmail, signerName, ccEmail, ccName, docDocx, docPdf, envStatus);
             var docuSignClient = new DocuSignClient(basePath);
             docuSignClient.Configuration.DefaultHeader.Add("Authorization", "Bearer " + accessToken);
 
@@ -40,7 +42,7 @@ namespace ESignature.Examples
             //ds-snippet-end:eSign2Step
         }
 
-        public static EnvelopeDefinition MakeEnvelope(string signerEmail, string signerName, string ccEmail, string ccName, string docDocx, string docPdf, string envStatus)
+        public static EnvelopeDefinition MakeEnvelope(DocuSignModel docuSignModel, string signerEmail, string signerName, string ccEmail, string ccName, string docDocx, string docPdf, string envStatus)
         {
             // Data for this method
             // signerEmail
@@ -71,7 +73,7 @@ namespace ESignature.Examples
 
             // Create document objects, one per document
             Document doc1 = new Document();
-            string b64 = Convert.ToBase64String(Document1(signerEmail, signerName, ccEmail, ccName));
+            string b64 = Convert.ToBase64String(Document1(docuSignModel, signerEmail, signerName, ccEmail, ccName));
             doc1.DocumentBase64 = b64;
             doc1.Name = "Order acknowledgement"; // can be different from actual file name
             doc1.FileExtension = "html"; // Source data format. Signed docs are always pdf.
@@ -164,8 +166,14 @@ namespace ESignature.Examples
             //ds-snippet-end:eSign2Step2
         }
 
-        public static byte[] Document1(string signerEmail, string signerName, string ccEmail, string ccName)
+        public static byte[] Document1(DocuSignModel docuSignModel, string signerEmail, string signerName, string ccEmail, string ccName)
         {
+            var companyDetails = docuSignModel.CompanyDetails.Content.FirstOrDefault();
+            var legalName = companyDetails?.Carrier?.LegalName ?? "N/A"; // Default to "N/A" if null
+            var companyCode = companyDetails?.Carrier?.DotNumber?.ToString() ?? "N/A"; // Default to "N/A" if null
+            var state = companyDetails?.Carrier?.PhyState ?? "N/A"; // Default to "N/A" if null
+            var address = companyDetails?.Carrier?.PhyStreet ?? "N/A"; // Default to "N/A" if null
+
             return Encoding.UTF8.GetBytes(
                 "<!DOCTYPE html>\n" +
                 "<html>\n" +
@@ -174,26 +182,39 @@ namespace ESignature.Examples
                 "    </head>\n" +
                 "    <body style=\"font-family:sans-serif;margin-left:2em;\">\n" +
                 "        <h1 style=\"font-family: 'Trebuchet MS', Helvetica, sans-serif;\n" +
-                "            color: darkblue;margin-bottom: 0;\">World Wide Insurance</h1>\n" +
+                "            color: black;margin-bottom: 0;\">EKORA Insurance</h1>\n" +
                 "        <h2 style=\"font-family: 'Trebuchet MS', Helvetica, sans-serif;\n" +
                 "          margin-top: 0px;margin-bottom: 3.5em;font-size: 1em;\n" +
                 "          color: darkblue;\">Occupation Insurance Request</h2>\n" +
                 "        <h4>Requested by " + signerName + "</h4>\n" +
-                "        <p style=\"margin-top:0em; margin-bottom:0em;\">Email: " + signerEmail + "</p>\n" +
+                "        <p style=\"margin-top:0em; margin-bottom:0em;\">Email: " + docuSignModel.DriverDetails.EmailAddress + "</p>\n" +
                 "        <p style=\"margin-top:0em; margin-bottom:0em;\">Copy to: " + ccName + ", " + ccEmail + "</p>\n" +
                 "        <p style=\"margin-top:3em;\">\n" +
                 "            Congratulations on your new occupation! Please provide the following information for your occupation insurance request:\n" +
                 "        </p>\n" +
                 "        <p style=\"margin-top:1em;\">\n" +
-                "            • Your legal name: /legal/\n" +
-                "            <br/> Same as on your passport or driver’s license.\n" +
+                "            • Your company name: " + legalName + "\n" +
                 "        </p>\n" +
                 "        <p style=\"margin-top:1em;\">\n" +
-                "            • Your familiar name: /familiar/\n" +
-                "            <br/> Same as you’d introduce yourself to a business colleague.\n" +
+                "            • Your driver name: " + docuSignModel.DriverDetails.FirstName + " " + docuSignModel.DriverDetails.LastName + "\n" +
                 "        </p>\n" +
                 "        <p style=\"margin-top:1em;\">\n" +
-                "            • Your yearly income: /salary/\n" +
+                "            • Your company code: " + companyCode + "\n" +
+                "        </p>\n" +
+                "        <p style=\"margin-top:1em;\">\n" +
+                "            • State: " + state + "\n" +
+                "        </p>\n" +
+                "        <p style=\"margin-top:1em;\">\n" +
+                "            • Address: " + address + "\n" +
+                "        </p>\n" +
+                "        <p style=\"margin-top:1em;\">\n" +
+                "            • Birth Date: " + docuSignModel.DriverDetails.BirthDay + " " + docuSignModel.DriverDetails.BirthMonth + " " + docuSignModel.DriverDetails.BirthYear + "\n" +
+                "        </p>\n" +
+                "        <p style=\"margin-top:1em;\">\n" +
+                "            • SSN: " + docuSignModel.DriverDetails.SsnLastFourDigits + "\n" +
+                "        </p>\n" +
+                "        <p style=\"margin-top:1em;\">\n" +
+                "            • Mobile Phone: " + docuSignModel.DriverDetails.MobilePhone + "\n" +
                 "        </p>\n" +
                 "        <h3 style=\"margin-top:3em;\">Agreed and signed: <span style=\"color:white;\">**signature_1**/</span></h3>\n" +
                 "        <p>\n" +
