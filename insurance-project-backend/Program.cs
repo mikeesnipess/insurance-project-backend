@@ -1,5 +1,6 @@
 using insurance_project_backend.Models.FMCSA;
 using insurance_project_backend.Services.Company;
+using insurance_project_backend.Services.DocuSign;
 using insurance_project_backend.Services.Drivers;
 using insurance_project_backend.Services.FMCSA;
 using Microsoft.OpenApi.Models;
@@ -10,9 +11,10 @@ var builder = WebApplication.CreateBuilder(args);
 var usdotConfig = builder.Configuration.GetSection("USDOT").Get<UsdotConfig>();
 
 builder.Services.AddSingleton(usdotConfig);
-builder.Services.AddSingleton<DocuSignClientService>();
 builder.Services.AddHttpClient<IUsdotFmcsaCarrierService, UsdotFmcsaCarrierService>();
-builder.Services.AddScoped<DocuSignClientService>();
+builder.Services.AddScoped<IDriverDetailsService,DriverDetailsService>();
+builder.Services.AddScoped<ICompanyDetailsService,CompanyDetailsService>();
+builder.Services.AddSingleton<DocuSignClientService>();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -23,9 +25,6 @@ builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.PropertyNamingPolicy = null;
 });
-
-builder.Services.AddScoped<IDriverDetailsService,DriverDetailsService>();
-builder.Services.AddScoped<ICompanyDetailsService,CompanyDetailsService>();
 
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
