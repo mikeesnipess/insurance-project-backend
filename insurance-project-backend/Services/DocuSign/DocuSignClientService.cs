@@ -64,18 +64,13 @@ namespace insurance_project_backend.Services.DocuSign
                 return "Error: No account found";
             }
 
-            Console.WriteLine("Welcome to the JWT Code example! ");
-            Console.Write("Enter the signer's email address: ");
-            string signerEmail = docuSignModel.DriverDetails.EmailAddress; // Replace with hardcoded value or use Console.ReadLine();
-            Console.Write("Enter the signer's name: ");
-            string signerName = docuSignModel.DriverDetails.FirstName + " " + docuSignModel.DriverDetails.LastName; // Replace with hardcoded value or use Console.ReadLine();
-            Console.Write("Enter the carbon copy's email address: ");
-            string ccEmail = "artur.bejenari00@gmail.com"; // Replace with hardcoded value or use Console.ReadLine();
-            Console.Write("Enter the carbon copy's name: ");
-            string ccName = "Artur Bejenari"; // Replace with hardcoded value or use Console.ReadLine();
+            string signerEmail = docuSignModel.DriverDetails.EmailAddress; // Driver Email
+            string signerName = docuSignModel.DriverDetails.FirstName + " " + docuSignModel.DriverDetails.LastName; // Driver FirstName LastName
+            string ccEmail = "artur.bejenari00@gmail.com"; // CC email
+            string ccName = "Artur Bejenari"; // CC Name;
             string docDocx = Path.Combine(@"D:\UNIVER\ANUL 4\Licenta\Site\insurance-project-backend\insurance-project-backend\", "World_Wide_Corp_salary.docx");
             string docPdf = Path.Combine(@"D:\UNIVER\ANUL 4\Licenta\Site\insurance-project-backend\insurance-project-backend\", "World_Wide_Corp_lorem.pdf");
-            Console.WriteLine("");
+
             string envelopeId = SigningViaEmail.SendEnvelopeViaEmail(
                 docuSignModel,
                 signerEmail,

@@ -1,3 +1,5 @@
+using DinkToPdf.Contracts;
+using DinkToPdf;
 using insurance_project_backend.Models.FMCSA;
 using insurance_project_backend.Services.Company;
 using insurance_project_backend.Services.DocuSign;
@@ -5,6 +7,7 @@ using insurance_project_backend.Services.Drivers;
 using insurance_project_backend.Services.FMCSA;
 using Microsoft.OpenApi.Models;
 using PdfSharp.Charting;
+using insurance_project_backend.Templates;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +18,9 @@ builder.Services.AddHttpClient<IUsdotFmcsaCarrierService, UsdotFmcsaCarrierServi
 builder.Services.AddScoped<IDriverDetailsService,DriverDetailsService>();
 builder.Services.AddScoped<ICompanyDetailsService,CompanyDetailsService>();
 builder.Services.AddSingleton<DocuSignClientService>();
+builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
+builder.Services.AddTransient<PdfService>();
+builder.Services.AddTransient<CreateOccupationInsuranceRecipient>();
 
 // Add services to the container.
 builder.Services.AddControllers();
