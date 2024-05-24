@@ -21,6 +21,7 @@ builder.Services.AddSingleton<DocuSignClientService>();
 builder.Services.AddSingleton(typeof(IConverter), new SynchronizedConverter(new PdfTools()));
 builder.Services.AddTransient<PdfService>();
 builder.Services.AddTransient<CreateOccupationInsuranceRecipient>();
+builder.Services.AddTransient<CreateOccupationInsuranceDocument>();
 
 // Add services to the container.
 builder.Services.AddControllers();

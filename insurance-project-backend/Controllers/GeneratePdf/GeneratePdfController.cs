@@ -10,10 +10,12 @@ namespace insurance_project_backend.Controllers
     public class GeneratePdfController : ControllerBase
     {
         private readonly CreateOccupationInsuranceRecipient _createOccupationInsuranceRecipient;
+        private readonly CreateOccupationInsuranceDocument _createOccupationInsuranceDocument;
 
-        public GeneratePdfController(CreateOccupationInsuranceRecipient createOccupationInsuranceRecipient)
+        public GeneratePdfController(CreateOccupationInsuranceRecipient createOccupationInsuranceRecipient, CreateOccupationInsuranceDocument createOccupationInsuranceDocument)
         {
             _createOccupationInsuranceRecipient = createOccupationInsuranceRecipient;
+            _createOccupationInsuranceDocument = createOccupationInsuranceDocument;
         }
 
         [HttpPost("generate")]
@@ -27,6 +29,19 @@ namespace insurance_project_backend.Controllers
             var pdfBytes = _createOccupationInsuranceRecipient.GenerateRecipient(docuSignModel);
 
             return File(pdfBytes, "application/pdf", "OccupationInsuranceRecipient.pdf");
+        }
+
+        [HttpPost("generateDocument")]
+        public async Task<IActionResult> GenerateDocument([FromBody] DocuSignModel docuSignModel)
+        {
+            if (docuSignModel == null)
+            {
+                return BadRequest("Invalid data.");
+            }
+
+            var pdfBytes = _createOccupationInsuranceDocument.GenerateDocument(docuSignModel);
+
+            return File(pdfBytes, "application/pdf", "OccupationInsuranceDocument.pdf");
         }
     }
 }
