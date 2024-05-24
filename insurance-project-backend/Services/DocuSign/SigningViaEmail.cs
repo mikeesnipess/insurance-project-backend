@@ -8,7 +8,6 @@ namespace ESignature.Examples
     using DocuSign.eSign.Client;
     using DocuSign.eSign.Model;
     using insurance_project_backend.Models.DocuSign;
-    using insurance_project_backend.Models.Drivers;
     using System;
     using System.Collections.Generic;
     using System.Text;
@@ -232,6 +231,5 @@ namespace ESignature.Examples
                 "    </body>\n" +
                 "</html>");
         }
-
     }
 }
