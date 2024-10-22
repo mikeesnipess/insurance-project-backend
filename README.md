@@ -21,7 +21,7 @@ Authentication and Authorization:
 The backend implements robust authentication and authorization mechanisms using JWT (JSON Web Tokens) to secure API endpoints.
 This ensures that only authenticated and authorized users can access certain features of the application.
 
-Integration with External Services:(DocuSign not finished, Stripe, FMCSA)
+Integration with External Services:(DocuSign, Stripe, FMCSA)
 
 The project integrates with various external services such as DocuSign for electronic signatures and Stripe for payment processing.
 These integrations streamline the insurance process, making it more efficient and user-friendly.
